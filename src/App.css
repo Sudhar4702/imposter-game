@@ -1,0 +1,111 @@
+/* Reset default browser styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, html {
+  height: 100%;
+  background: linear-gradient(135deg, #1f1c2c, #928dab);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Game container */
+.game-container {
+  background-color: #ffffffee; /* slightly transparent white */
+  border-radius: 16px;
+  padding: 40px 30px;
+  width: 400px;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* Title */
+.game-container h1 {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 25px;
+  color: #4b1979;
+  text-align: center;
+}
+
+/* Inputs */
+.game-container input {
+  width: 80%;
+  padding: 12px 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  font-size: 16px;
+  text-align: center;
+  outline: none;
+  transition: 0.3s;
+}
+
+.game-container input:focus {
+  border-color: #6a1b9a;
+  box-shadow: 0 0 10px rgba(106,27,154,0.3);
+}
+
+/* Buttons */
+.game-container button {
+  padding: 12px 25px;
+  margin: 10px 5px;
+  border: none;
+  border-radius: 8px;
+  background-color: #6a1b9a;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.game-container button:hover {
+  background-color: #4b1979;
+}
+
+/* Player list */
+.game-container ul {
+  list-style-type: none;
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 15px 0;
+  padding: 0;
+}
+
+.game-container li {
+  padding: 8px 0;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+}
+
+/* Role box */
+.role-box {
+  margin-top: 25px;
+  padding: 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 18px;
+  text-align: center;
+  box-shadow: inset 0 0 15px rgba(75,25,121,0.2);
+  color: #fff;
+}
+
+/* Imposter style */
+.role-imposter {
+  background-color: #ff4c4c;
+  color: #fff;
+}
+
+/* Crewmate style */
+.role-crewmate {
+  background-color: #4caf50;
+  color: #fff;
+}
