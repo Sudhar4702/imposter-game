@@ -8,10 +8,13 @@ const server = http.createServer(app);
 // ✅ Add Socket.io with CORS here
 const io = new Server(server, {
   cors: {
-    origin: "*", // or your frontend URL
+    origin: [
+      "https://imposter-game-production-d3f7.up.railway.app", // your frontend URL
+      "http://localhost:5173" // optional, for local dev
+    ],
     methods: ["GET", "POST"]
   }
-});
+})
 
 // Word sets for the game
 const wordPairs = [
