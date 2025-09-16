@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
 
-const SERVER_URL = "https://imposter-game-forfun.onrender.com"; // backend URL
+const SERVER_URL = "https://imposter-game-3345.onrender.com"; // backend URL
 const socket = io(SERVER_URL, {
   transports: ["websocket", "polling"]
 });
