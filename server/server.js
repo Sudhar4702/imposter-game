@@ -72,7 +72,7 @@ const wordPairs = [
 { "Imposter": "think", "Crewmate": "talk" },
 { "Imposter": "Wallet", "Crewmate": "Purse" },
 { "Imposter": "White", "Crewmate": "Black" },
-{ "Imposter": "Door", "Crewmate": "Window" }.
+{ "Imposter": "Door", "Crewmate": "Window" },
 { "Imposter": "Employee", "Crewmate": "Contingent-Worker" },
 { "Imposter": "Pig", "Crewmate": "Horse" },
 { "Imposter": "SDM", "Crewmate": "Manager" },
