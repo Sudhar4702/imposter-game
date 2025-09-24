@@ -8,8 +8,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-sudhar-45.onrender.com", // deployed frontend
-      "http://localhost:5173" // local dev
+      "https://imposter-game-sudhar-45.onrender.com",
+      "http://localhost:5173"
     ],
     methods: ["GET", "POST"]
   }
@@ -33,13 +33,15 @@ io.on("connection", (socket) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
     const room = rooms[roomCode];
 
+    // Prevent duplicate names
     const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
+
     if (existing) {
-      existing.id = socket.id; // rejoin
+      existing.id = socket.id; // reconnect
       socket.join(roomCode);
-      socket.emit("gameWord", existing.word ? { ...existing } : null);
+      if (room.currentSet) sendGameState(roomCode);
       return;
     }
 
@@ -50,10 +52,8 @@ io.on("connection", (socket) => {
     room.players.push(newPlayer);
     socket.join(roomCode);
 
-    // resend room players
     io.to(roomCode).emit("roomUpdate", room.players);
 
-    // if game already started, send existing roles/words
     if (room.currentSet) sendGameState(roomCode);
   });
 
@@ -102,7 +102,7 @@ function assignRolesAndWords(room) {
   });
 }
 
-// Send state to everyone
+// Send current state to everyone
 function sendGameState(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
