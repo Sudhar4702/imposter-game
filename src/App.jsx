@@ -23,7 +23,7 @@ export default function App() {
       setSubject(data.subject);
       setRole("Admin");
       setWord(null);
-      setPlayers(data.players); // Update full player list with roles and words
+      setPlayers(data.players);
     });
     socket.on("gameWord", (data) => {
       setSubject(data.subject);
