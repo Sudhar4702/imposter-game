@@ -1,117 +1,134 @@
 /* Overall page background and font settings */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #1a1a1a;
-  color: #f0f0f0;
+  font-family: 'Georgia', serif;
+  background-color: #0b132b;
+  color: #e0e0e0;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   padding: 20px;
+  background-image: url('data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M100 0L0 100V0h100z" fill="%231c263c" opacity=".1"/%3E%3Cpath d="M0 0h100v100L0 0z" fill="%231c263c" opacity=".1"/%3E%3C/svg%3E');
 }
 
 /* Main game container styling */
 .game-container {
-  background-color: #2c2c2c;
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  padding: 40px;
+  background-color: #1c263c;
+  border-radius: 15px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  padding: 50px;
   max-width: 600px;
   width: 100%;
   text-align: center;
+  border: 1px solid #4a5d7c;
 }
 
 /* Header and titles */
 header h1 {
-  font-size: 2.5em;
-  color: #61dafb;
-  margin-bottom: 20px;
+  font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+  font-size: 3em;
+  color: #f7d283;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+  margin-bottom: 25px;
 }
 
-h2 {
-  font-size: 1.8em;
-  color: #e0e0e0;
+.card-title {
+  font-size: 2em;
+  color: #b3cde0;
+  margin-top: 0;
 }
 
-h3 {
-  font-size: 1.2em;
-  color: #bbbbbb;
-  margin-top: 25px;
-  border-bottom: 1px solid #444;
+.section-title {
+  font-size: 1.4em;
+  color: #f7d283;
+  margin-top: 30px;
+  border-bottom: 2px solid #5a6a8c;
   padding-bottom: 10px;
 }
 
 /* Cards and sections */
-.join-room-card, .game-card {
-  background-color: #383838;
-  border-radius: 10px;
+.card {
+  background-color: #2b3d5c;
+  border-radius: 12px;
   padding: 30px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-.room-info {
-  margin-bottom: 20px;
+.section {
+  margin-top: 25px;
 }
 
 /* Inputs and buttons */
 .input-field {
-  width: calc(100% - 20px);
-  padding: 12px 10px;
+  width: calc(100% - 24px);
+  padding: 12px;
   margin: 10px 0;
-  border: none;
+  border: 1px solid #5a6a8c;
   border-radius: 8px;
-  background-color: #555;
-  color: #f0f0f0;
+  background-color: #3e506d;
+  color: #e0e0e0;
   font-size: 1em;
   outline: none;
-  transition: box-shadow 0.3s ease;
+  transition: border-color 0.3s ease;
+}
+
+.input-field::placeholder {
+  color: #a0a0a0;
 }
 
 .input-field:focus {
-  box-shadow: 0 0 0 3px #61dafb;
+  border-color: #f7d283;
 }
 
-button.join-button, .control-button {
-  width: calc(100% - 20px);
-  padding: 15px;
-  margin-top: 20px;
+.classic-button {
+  padding: 15px 30px;
+  margin: 10px;
   border: none;
   border-radius: 8px;
   font-size: 1.1em;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-button.join-button {
-  background-color: #4a90e2;
-  color: white;
+.classic-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
 }
 
-button.join-button:hover {
-  background-color: #3a7bd5;
-  transform: translateY(-2px);
+.blue-button {
+  background-color: #3b5998;
+  color: #e0e0e0;
 }
 
-.control-button {
-  background-color: #4caf50;
-  color: white;
-  margin: 5px;
-  width: auto;
+.blue-button:hover {
+  background-color: #2f4980;
 }
 
-.control-button.next-word {
-  background-color: #ff9800;
+.green-button {
+  background-color: #4CAF50;
+  color: #fff;
 }
 
-.control-button:hover {
-  background-color: #388e3c;
-  transform: translateY(-2px);
+.green-button:hover {
+  background-color: #429c46;
 }
 
-.control-button.next-word:hover {
-  background-color: #e68900;
+.red-button {
+  background-color: #d9534f;
+  color: #fff;
+}
+
+.red-button:hover {
+  background-color: #c9302c;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* Player list styling */
@@ -122,46 +139,58 @@ button.join-button:hover {
 }
 
 .player-item, .admin-player-item {
-  background-color: #444;
-  padding: 12px;
-  margin-bottom: 8px;
+  background-color: #3e506d;
+  padding: 15px;
+  margin-bottom: 10px;
   border-radius: 8px;
   text-align: left;
-  border-left: 5px solid #61dafb;
+  border-left: 5px solid #6c7a97;
+  transition: background-color 0.3s ease;
+}
+
+.player-item:hover, .admin-player-item:hover {
+  background-color: #4a5d7c;
 }
 
 /* Game status display */
 .game-details {
-  background-color: #383838;
-  padding: 15px;
-  border-radius: 10px;
-  margin-top: 20px;
-  border: 1px solid #555;
+  background-color: #3e506d;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 25px;
+  border: 1px solid #5a6a8c;
+  text-align: center;
 }
 
+.game-details strong {
+  color: #b3cde0;
+  font-size: 1.1em;
+}
+
+/* Role and word specific colors */
 .role-crewmate {
-  color: #4a90e2;
+  color: #8bb2ff; /* Classic blue */
   font-weight: bold;
 }
 
 .role-imposter {
-  color: #ff6347;
+  color: #e76f51; /* Classic red */
   font-weight: bold;
 }
 
 .role-admin {
-  color: #ffbb00;
+  color: #ffc94b; /* Goldish-yellow for classic feel */
   font-weight: bold;
 }
 
 .word-text {
-  color: #a8dadc;
+  color: #84a59d; /* Muted greenish-blue */
   font-weight: bold;
 }
 
 /* Responsive design for smaller screens */
 @media (max-width: 768px) {
   .game-container {
-    padding: 20px;
+    padding: 30px 15px;
   }
 }
