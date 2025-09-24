@@ -32,20 +32,21 @@ io.on("connection", (socket) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
     const room = rooms[roomCode];
 
+    // Check if the player is already in the room
     const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
     if (existing) {
       existing.id = socket.id;
       socket.join(roomCode);
-      if (room.currentSet) sendGameState(roomCode);
+      sendGameState(roomCode); // Update all players
       return;
     }
 
     const isAdmin = playerName === "Sudhar";
     if (isAdmin && !room.admin) room.admin = socket.id;
 
-    const newPlayer = { id: socket.id, name: playerName, role: null, word: null };
+    const newPlayer = { id: socket.id, name: playerName, role: isAdmin ? "Admin" : null, word: null };
     room.players.push(newPlayer);
     socket.join(roomCode);
 
@@ -72,6 +73,7 @@ io.on("connection", (socket) => {
       rooms[roomCode].players = rooms[roomCode].players.filter(p => p.id !== socket.id);
       io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
       if (rooms[roomCode].players.length === 0) delete rooms[roomCode];
+      if (rooms[roomCode] && rooms[roomCode].admin === socket.id) rooms[roomCode].admin = null;
     }
   });
 });
@@ -79,38 +81,35 @@ io.on("connection", (socket) => {
 function assignRolesAndWords(room) {
   const set = wordSets[Math.floor(Math.random() * wordSets.length)];
   room.currentSet = set;
-  const playersNoAdmin = room.players.filter(p => p.id !== room.admin);
-  const imposterIndex = Math.floor(Math.random() * playersNoAdmin.length);
+
+  // Reset roles for all players
   room.players.forEach((p) => {
-    if (p.id === room.admin) {
-      p.role = "Admin";
-      p.word = null;
-    } else if (playersNoAdmin[imposterIndex].id === p.id) {
-      p.role = "Imposter";
-      p.word = set.imposterWord;
-    } else {
-      p.role = "Crewmate";
-      p.word = set.crewmateWord;
-    }
+    p.role = "Crewmate";
+    p.word = set.crewmateWord;
   });
+
+  // Assign Admin role back to Sudhar
+  const adminPlayer = room.players.find(p => p.id === room.admin);
+  if (adminPlayer) {
+    adminPlayer.role = "Admin";
+    adminPlayer.word = null;
+  }
+
+  // Randomly assign one non-admin as the Imposter
+  const nonAdmins = room.players.filter(p => p.id !== room.admin);
+  if (nonAdmins.length > 0) {
+    const imposterPlayer = nonAdmins[Math.floor(Math.random() * nonAdmins.length)];
+    imposterPlayer.role = "Imposter";
+    imposterPlayer.word = set.imposterWord;
+  }
 }
 
 function sendGameState(roomCode) {
   const room = rooms[roomCode];
-  if (!room) return;
+  if (!room || !room.currentSet) return;
   room.players.forEach((p) => {
-    if (p.id === room.admin) {
-      io.to(p.id).emit("adminView", {
-        subject: room.currentSet.subject,
-        players: room.players
-      });
-    } else {
-      io.to(p.id).emit("gameWord", {
-        subject: room.currentSet.subject,
-        role: p.role,
-        word: p.word
-      });
-    }
+    if (p.id === room.admin) io.to(p.id).emit("adminView", { subject: room.currentSet.subject, players: room.players });
+    else io.to(p.id).emit("gameWord", { subject: room.currentSet.subject, role: p.role, word: p.word });
   });
   io.to(roomCode).emit("roomUpdate", room.players);
 }
