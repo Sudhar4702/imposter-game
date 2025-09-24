@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-production-d3f7.up.railway.app", // your frontend URL
+      "https://imposter-game-production-d3f7.up.railway.app", // frontend URL
       "http://localhost:5173" // optional, for local dev
     ],
     methods: ["GET", "POST"]
@@ -68,20 +68,19 @@ const wordPairs = [
   { "Imposter": "run", "Crewmate": "walk" },
   { "Imposter": "eat", "Crewmate": "drink" },
   { "Imposter": "think", "Crewmate": "talk" },
-{ "Imposter": "Bathroom", "Crewmate": "Toilet" },
-{ "Imposter": "think", "Crewmate": "talk" },
-{ "Imposter": "Wallet", "Crewmate": "Purse" },
-{ "Imposter": "White", "Crewmate": "Black" },
-{ "Imposter": "Door", "Crewmate": "Window" },
-{ "Imposter": "Employee", "Crewmate": "Contingent-Worker" },
-{ "Imposter": "Pig", "Crewmate": "Horse" },
-{ "Imposter": "SDM", "Crewmate": "Manager" },
-{ "Imposter": "Outlook", "Crewmate": "Teams" },
-{ "Imposter": "Bed", "Crewmate": "Cot" },
-{ "Imposter": "Shoe", "Crewmate": "Socks" },
-{ "Imposter": "Ginger", "Crewmate": "Garlic" },
-{ "Imposter": "Shop", "Crewmate": "Shampoo" },
-{ "Imposter": "shirt", "Crewmate": "t-shirt" },
+  { "Imposter": "Bathroom", "Crewmate": "Toilet" },
+  { "Imposter": "Wallet", "Crewmate": "Purse" },
+  { "Imposter": "White", "Crewmate": "Black" },
+  { "Imposter": "Door", "Crewmate": "Window" },
+  { "Imposter": "Employee", "Crewmate": "Contingent-Worker" },
+  { "Imposter": "Pig", "Crewmate": "Horse" },
+  { "Imposter": "SDM", "Crewmate": "Manager" },
+  { "Imposter": "Outlook", "Crewmate": "Teams" },
+  { "Imposter": "Bed", "Crewmate": "Cot" },
+  { "Imposter": "Shoe", "Crewmate": "Socks" },
+  { "Imposter": "Ginger", "Crewmate": "Garlic" },
+  { "Imposter": "Shop", "Crewmate": "Shampoo" },
+  { "Imposter": "shirt", "Crewmate": "t-shirt" },
   { "Imposter": "carrot", "Crewmate": "potato" },
   { "Imposter": "onion", "Crewmate": "tomato" },
   { "Imposter": "drum", "Crewmate": "guitar" },
@@ -89,8 +88,8 @@ const wordPairs = [
   { "Imposter": "actor", "Crewmate": "hero" },
   { "Imposter": "queen", "Crewmate": "king" },
   { "Imposter": "baby", "Crewmate": "child" },
-    { "Imposter": "uncle", "Crewmate": "aunt" },
-      { "Imposter": "cloud", "Crewmate": "sky" },
+  { "Imposter": "uncle", "Crewmate": "aunt" },
+  { "Imposter": "cloud", "Crewmate": "sky" },
   { "Imposter": "leaf", "Crewmate": "tree" },
   { "Imposter": "stone", "Crewmate": "rock" },
   { "Imposter": "gold", "Crewmate": "silver" },
@@ -98,10 +97,9 @@ const wordPairs = [
   { "Imposter": "lock", "Crewmate": "key" }
 ];
 
-
 let rooms = {}; // Store players in each room
 
-// ✅ Add this function here
+// ✅ Assign roles and words
 function assignRolesAndWords(roomCode) {
   const room = rooms[roomCode];
   if (!room || room.players.length < 2) return;
@@ -113,10 +111,10 @@ function assignRolesAndWords(roomCode) {
   shuffledPlayers.forEach((player, index) => {
     if (index < numImposters) {
       player.role = "Imposter";
-      io.to(player.id).emit("gameWord", { word: chosen.imposter, role: "Imposter" });
+      io.to(player.id).emit("gameWord", { word: chosen.Imposter, role: "Imposter" });
     } else {
       player.role = "Crewmate";
-      io.to(player.id).emit("gameWord", { word: chosen.crewmate, role: "Crewmate" });
+      io.to(player.id).emit("gameWord", { word: chosen.Crewmate, role: "Crewmate" });
     }
   });
 
@@ -126,20 +124,29 @@ function assignRolesAndWords(roomCode) {
   );
 }
 
-// ✅ Socket.io connection events
+// ✅ Socket.io connection
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
 
   // Player joins a room
   socket.on("joinRoom", ({ roomCode, playerName }) => {
-    if (!rooms[roomCode]) rooms[roomCode] = { players: [] };
+    if (!rooms[roomCode]) rooms[roomCode] = { players: [], gameStarted: false };
     rooms[roomCode].players.push({ id: socket.id, name: playerName, role: null });
     socket.join(roomCode);
+
+    // If game already started, assign role immediately
+    if (rooms[roomCode].gameStarted) {
+      assignRolesAndWords(roomCode);
+    }
+
     io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
   });
 
   // Start game
-  socket.on("startGame", (roomCode) => assignRolesAndWords(roomCode));
+  socket.on("startGame", (roomCode) => {
+    rooms[roomCode].gameStarted = true;
+    assignRolesAndWords(roomCode);
+  });
 
   // Next word / next round
   socket.on("nextWord", (roomCode) => assignRolesAndWords(roomCode));
