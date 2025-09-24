@@ -15,7 +15,6 @@ const io = new Server(server, {
   }
 });
 
-// Word sets with subjects
 const wordSets = [
   { subject: "Solar System", crewmateWord: "Sun", imposterWord: "Moon" },
   { subject: "Fruits", crewmateWord: "Apple", imposterWord: "Orange" },
@@ -24,7 +23,7 @@ const wordSets = [
   { subject: "Colors", crewmateWord: "White", imposterWord: "Black" }
 ];
 
-let rooms = {}; // roomCode => { players: [], currentSet: null, admin: null }
+let rooms = {};
 
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
@@ -33,12 +32,12 @@ io.on("connection", (socket) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
     const room = rooms[roomCode];
 
-    // prevent duplicate names
+    // check for duplicate player names
     const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
     if (existing) {
-      existing.id = socket.id; // reconnect
+      existing.id = socket.id;
       socket.join(roomCode);
       if (room.currentSet) sendGameState(roomCode);
       return;
@@ -52,8 +51,6 @@ io.on("connection", (socket) => {
     socket.join(roomCode);
 
     io.to(roomCode).emit("roomUpdate", room.players);
-
-    // send current game state to the joining player if game already started
     if (room.currentSet) sendGameState(roomCode);
   });
 
@@ -83,10 +80,8 @@ io.on("connection", (socket) => {
 function assignRolesAndWords(room) {
   const set = wordSets[Math.floor(Math.random() * wordSets.length)];
   room.currentSet = set;
-
   const playersNoAdmin = room.players.filter(p => p.id !== room.admin);
   const imposterIndex = Math.floor(Math.random() * playersNoAdmin.length);
-
   room.players.forEach((p) => {
     if (p.id === room.admin) {
       p.role = "Admin";
@@ -104,7 +99,6 @@ function assignRolesAndWords(room) {
 function sendGameState(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
-
   room.players.forEach((p) => {
     if (p.id === room.admin) {
       io.to(p.id).emit("adminView", {
@@ -119,7 +113,6 @@ function sendGameState(roomCode) {
       });
     }
   });
-
   io.to(roomCode).emit("roomUpdate", room.players);
 }
 
