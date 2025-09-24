@@ -5,16 +5,16 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Add Socket.io with CORS here
+// Socket.io with CORS
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-sudhar-45.onrender.com", // frontend URL
-      "http://localhost:5173" // optional, for local dev
+      "https://imposter-game-production-d3f7.up.railway.app",
+      "http://localhost:5173"
     ],
     methods: ["GET", "POST"]
   }
-})
+});
 
 // Word sets for the game
 const wordPairs = [
@@ -111,16 +111,17 @@ function assignRolesAndWords(roomCode) {
   shuffledPlayers.forEach((player, index) => {
     if (index < numImposters) {
       player.role = "Imposter";
-      io.to(player.id).emit("gameWord", { word: chosen.Imposter, role: "Imposter" });
+      player.word = chosen.Imposter;
     } else {
       player.role = "Crewmate";
-      io.to(player.id).emit("gameWord", { word: chosen.Crewmate, role: "Crewmate" });
+      player.word = chosen.Crewmate;
     }
+    io.to(player.id).emit("gameWord", { word: player.word, role: player.role });
   });
 
   console.log(
     "🎲 New Roles & Words:",
-    room.players.map((p) => ({ name: p.name, role: p.role }))
+    room.players.map((p) => ({ name: p.name, role: p.role, word: p.word }))
   );
 }
 
@@ -128,17 +129,28 @@ function assignRolesAndWords(roomCode) {
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
 
-  // Player joins a room
   socket.on("joinRoom", ({ roomCode, playerName }) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], gameStarted: false };
-    rooms[roomCode].players.push({ id: socket.id, name: playerName, role: null });
-    socket.join(roomCode);
 
-    // If game already started, assign role immediately
-    if (rooms[roomCode].gameStarted) {
-      assignRolesAndWords(roomCode);
+    // Check for existing player by name
+    let existingPlayer = rooms[roomCode].players.find(p => p.name === playerName);
+
+    if (existingPlayer) {
+      // Update socket ID to persist word/role
+      existingPlayer.id = socket.id;
+      console.log(`♻️ Player ${playerName} rejoined room ${roomCode}`);
+      // Emit existing word & role
+      if (existingPlayer.word && existingPlayer.role) {
+        io.to(socket.id).emit("gameWord", { word: existingPlayer.word, role: existingPlayer.role });
+      }
+    } else {
+      // Add new player
+      const newPlayer = { id: socket.id, name: playerName, role: null, word: null };
+      rooms[roomCode].players.push(newPlayer);
+      console.log(`✅ Player ${playerName} added to room ${roomCode}`);
     }
 
+    socket.join(roomCode);
     io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
   });
 
@@ -154,7 +166,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("❌ Player disconnected:", socket.id);
     for (const roomCode in rooms) {
-      rooms[roomCode].players = rooms[roomCode].players.filter((p) => p.id !== socket.id);
+      rooms[roomCode].players = rooms[roomCode].players.filter(p => p.id !== socket.id);
       io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
     }
   });
