@@ -8,114 +8,91 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-sudhar-45.onrender.com", // replace with frontend
+      "https://imposter-game-sudhar-45.onrender.com", // frontend URL
       "http://localhost:5173"
     ],
     methods: ["GET", "POST"]
   }
 });
 
+// Word sets for the game
 const wordPairs = [
   { Imposter: "papaya", Crewmate: "mango" },
   { Imposter: "helmet", Crewmate: "cap" },
-  { Imposter: "dog", Crewmate: "cat" },
+  { Imposter: "fork", Crewmate: "spoon" },
+  { Imposter: "sofa", Crewmate: "chair" },
   { Imposter: "sun", Crewmate: "moon" },
+  { Imposter: "dog", Crewmate: "cat" },
   { Imposter: "salt", Crewmate: "sugar" },
-  { Imposter: "tea", Crewmate: "coffee" },
-  { Imposter: "pen", Crewmate: "pencil" },
-  { Imposter: "school", Crewmate: "college" }
+  { Imposter: "car", Crewmate: "bus" }
 ];
 
-let rooms = {};
+let rooms = {}; // store room states
 
-// Assign roles and words
 function assignRolesAndWords(roomCode) {
   const room = rooms[roomCode];
   if (!room || room.players.length < 2) return;
 
   const chosen = wordPairs[Math.floor(Math.random() * wordPairs.length)];
+  room.currentWords = chosen;
 
-  // Exclude admin
-  const nonAdminPlayers = room.players.filter((p) => !p.isAdmin);
-
-  const shuffled = [...nonAdminPlayers].sort(() => 0.5 - Math.random());
-  const numImposters = Math.min(1, nonAdminPlayers.length - 1);
-
-  shuffled.forEach((player, index) => {
-    if (index < numImposters) {
-      player.role = "Imposter";
-      player.word = chosen.Imposter;
+  // pick imposters
+  const shuffled = [...room.players].sort(() => 0.5 - Math.random());
+  const numImposters = Math.min(1, room.players.length - 1); // 1 imposter
+  shuffled.forEach((p, i) => {
+    if (p.name === "Sudhar") {
+      p.role = "Admin";
+      p.word = "N/A";
+    } else if (i < numImposters) {
+      p.role = "Imposter";
+      p.word = chosen.Imposter;
     } else {
-      player.role = "Crewmate";
-      player.word = chosen.Crewmate;
+      p.role = "Crewmate";
+      p.word = chosen.Crewmate;
     }
-
-    // Send word+role only to player
-    io.to(player.id).emit("gameWord", {
-      word: player.word,
-      role: player.role,
-      isAdmin: false
-    });
+    io.to(p.id).emit("gameWord", { role: p.role, word: p.word });
   });
 
-  room.currentWord = chosen;
-
-  // ✅ Send full mapping only to admin
-  room.players
-    .filter((p) => p.isAdmin)
-    .forEach((admin) => {
-      io.to(admin.id).emit(
-        "adminView",
-        nonAdminPlayers.map((p) => ({
-          name: p.name,
-          role: p.role,
-          word: p.word
-        }))
-      );
+  // send admin full info
+  const admin = room.players.find((p) => p.name === "Sudhar");
+  if (admin) {
+    io.to(admin.id).emit("adminUpdate", {
+      words: chosen,
+      players: room.players.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        word: p.word
+      }))
     });
+  }
 
-  console.log(
-    "🎲 Roles & Words:",
-    nonAdminPlayers.map((p) => ({ name: p.name, role: p.role }))
-  );
+  io.to(roomCode).emit("roomUpdate", room.players);
 }
 
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
 
   socket.on("joinRoom", ({ roomCode, playerName }) => {
-    if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentWord: null };
+    if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentWords: null };
 
-    const room = rooms[roomCode];
-    let existingPlayer = room.players.find((p) => p.name === playerName);
+    let room = rooms[roomCode];
+    let existing = room.players.find((p) => p.name === playerName);
 
-    if (existingPlayer) {
-      existingPlayer.id = socket.id;
-
-      if (!existingPlayer.isAdmin) {
-        io.to(socket.id).emit("gameWord", {
-          word: existingPlayer.word,
-          role: existingPlayer.role,
-          isAdmin: false
-        });
-      }
+    if (existing) {
+      existing.id = socket.id; // update id if reconnected
     } else {
-      const newPlayer = {
-        id: socket.id,
-        name: playerName,
-        role: null,
-        word: null,
-        isAdmin: playerName === "Sudhar"
-      };
-      room.players.push(newPlayer);
-
-      if (newPlayer.isAdmin) {
-        io.to(socket.id).emit("adminView", []);
-      }
+      room.players.push({ id: socket.id, name: playerName, role: null, word: null });
     }
 
     socket.join(roomCode);
     io.to(roomCode).emit("roomUpdate", room.players);
+
+    // if game already started → re-send old role/word
+    if (room.currentWords) {
+      let p = room.players.find((pl) => pl.id === socket.id);
+      if (p) io.to(p.id).emit("gameWord", { role: p.role, word: p.word });
+    }
   });
 
   socket.on("startGame", (roomCode) => assignRolesAndWords(roomCode));
@@ -123,11 +100,9 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("❌ Player disconnected:", socket.id);
-    for (const roomCode in rooms) {
-      rooms[roomCode].players = rooms[roomCode].players.filter(
-        (p) => p.id !== socket.id
-      );
-      io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
+    for (const code in rooms) {
+      rooms[code].players = rooms[code].players.filter((p) => p.id !== socket.id);
+      io.to(code).emit("roomUpdate", rooms[code].players);
     }
   });
 });
