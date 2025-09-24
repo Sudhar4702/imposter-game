@@ -24,7 +24,7 @@ const wordSets = [
   { subject: "Colors", crewmateWord: "White", imposterWord: "Black" }
 ];
 
-let rooms = {}; // { roomCode: { players: [], currentSet: null, admin: null } }
+let rooms = {}; // roomCode => { players: [], currentSet: null, admin: null }
 
 io.on("connection", (socket) => {
   console.log("✅ Player connected:", socket.id);
@@ -33,11 +33,10 @@ io.on("connection", (socket) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
     const room = rooms[roomCode];
 
-    // Prevent duplicate names
+    // prevent duplicate names
     const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
-
     if (existing) {
       existing.id = socket.id; // reconnect
       socket.join(roomCode);
@@ -54,6 +53,7 @@ io.on("connection", (socket) => {
 
     io.to(roomCode).emit("roomUpdate", room.players);
 
+    // send current game state to the joining player if game already started
     if (room.currentSet) sendGameState(roomCode);
   });
 
@@ -80,7 +80,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Assign roles & words
 function assignRolesAndWords(room) {
   const set = wordSets[Math.floor(Math.random() * wordSets.length)];
   room.currentSet = set;
@@ -88,7 +87,7 @@ function assignRolesAndWords(room) {
   const playersNoAdmin = room.players.filter(p => p.id !== room.admin);
   const imposterIndex = Math.floor(Math.random() * playersNoAdmin.length);
 
-  room.players.forEach((p, i) => {
+  room.players.forEach((p) => {
     if (p.id === room.admin) {
       p.role = "Admin";
       p.word = null;
@@ -102,7 +101,6 @@ function assignRolesAndWords(room) {
   });
 }
 
-// Send current state to everyone
 function sendGameState(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
@@ -126,4 +124,4 @@ function sendGameState(roomCode) {
 }
 
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
