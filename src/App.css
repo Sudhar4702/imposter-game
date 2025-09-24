@@ -109,3 +109,29 @@ body, html {
   background-color: #4caf50;
   color: #fff;
 }
+
+.admin-panel {
+  margin-top: 25px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #f3f3f3;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  text-align: left;
+}
+
+.admin-panel h2 {
+  margin-bottom: 10px;
+  color: #4b1979;
+}
+
+.admin-panel ul {
+  list-style: none;
+  padding: 0;
+}
+
+.admin-panel li {
+  padding: 6px 0;
+  border-bottom: 1px solid #ddd;
+  font-weight: 500;
+}
+
