@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
-import "./App.css"; // Assuming you have a separate CSS file for best practice
+import "./App.css";
 
 const socket = io("https://imposter-game-sudhar-45.onrender.com", { transports: ['websocket'] });
 
@@ -55,8 +55,8 @@ export default function App() {
       </header>
 
       {!joined ? (
-        <div className="join-room-card">
-          <h2>Join a Room</h2>
+        <div className="card">
+          <h2 className="card-title">Join a Room</h2>
           <input
             className="input-field"
             placeholder="Room Code"
@@ -69,51 +69,51 @@ export default function App() {
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
           />
-          <button className="join-button" onClick={handleJoin}>
+          <button className="classic-button blue-button" onClick={handleJoin}>
             Join Room
           </button>
         </div>
       ) : (
-        <div className="game-card">
+        <div className="card">
           <div className="room-info">
-            <h2>Room: {roomCode}</h2>
+            <h2 className="card-title">Room: {roomCode}</h2>
           </div>
 
-          <div className="player-list-section">
-            <h3>Players in Room</h3>
+          <div className="section">
+            <h3 className="section-title">Players in Room</h3>
             <ul className="player-list">
               {players.map((p) => (
                 <li key={p.id} className="player-item">
-                  {p.name} {p.id === socket.id ? "(You)" : ""} {p.role && `(${p.role})`}
+                  {p.name} {p.id === socket.id ? "(You)" : ""}
                 </li>
               ))}
             </ul>
           </div>
 
           {isAdmin ? (
-            <div className="admin-controls">
+            <div className="section">
               <div className="button-group">
-                <button className="control-button start-game" onClick={handleStartGame}>
+                <button className="classic-button green-button" onClick={handleStartGame}>
                   Start Game
                 </button>
-                <button className="control-button next-word" onClick={handleNextWord}>
+                <button className="classic-button red-button" onClick={handleNextWord}>
                   Next Word
                 </button>
               </div>
               {subject && <div className="game-details">Current Subject: {subject}</div>}
-              <div className="admin-view-section">
-                <h3>Admin View: Roles and Words</h3>
+              <div className="section">
+                <h3 className="section-title">Admin View: Roles and Words</h3>
                 <ul className="admin-player-list">
                   {players.map((p) => (
                     <li key={p.id} className="admin-player-item">
-                      {p.name} - Role: {p.role} - Word: {p.word || "N/A"}
+                      {p.name} - <span className={`role-${p.role?.toLowerCase()}`}>{p.role}</span> - <span className="word-text">{p.word || "N/A"}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
           ) : (
-            <div className="game-display">
+            <div className="game-display section">
               {subject ? (
                 <div>
                   <div className="game-details">
@@ -123,7 +123,7 @@ export default function App() {
                     <strong>Your Role:</strong> <span className={`role-${role?.toLowerCase()}`}>{role}</span>
                   </div>
                   <div className="game-details">
-                    <strong>Your Word:</strong> <span className="word-text">{word || "N/A"}</span>
+                    <strong>Your Word:</strong> <span className="word-text">{word}</span>
                   </div>
                 </div>
               ) : (
