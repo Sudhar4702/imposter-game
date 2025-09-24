@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-production-d3f7.up.railway.app", // frontend URL
+      "https://imposter-game-sudhar-45.onrender.com", // frontend URL
       "http://localhost:5173" // optional, for local dev
     ],
     methods: ["GET", "POST"]
