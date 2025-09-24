@@ -9,21 +9,19 @@ export default function App() {
   const [joined, setJoined] = useState(false);
   const [players, setPlayers] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [role, setRole] = useState("");
-  const [word, setWord] = useState("");
+  const [subject, setSubject] = useState(null);
+  const [role, setRole] = useState(null);
+  const [word, setWord] = useState(null);
 
   useEffect(() => {
     socket.on("roomUpdate", (players) => {
       setPlayers(players);
-      const user = players.find((p) => p.name === playerName);
-      setIsAdmin(user && user.role === "Admin");
     });
     socket.on("adminView", (data) => {
       setSubject(data.subject);
       setRole("Admin");
-      setWord(null);
       setPlayers(data.players);
+      setIsAdmin(true); // Explicitly set isAdmin for the admin
     });
     socket.on("gameWord", (data) => {
       setSubject(data.subject);
@@ -42,6 +40,7 @@ export default function App() {
     if (roomCode && playerName) {
       socket.emit("joinRoom", { roomCode, playerName });
       setJoined(true);
+      if (playerName === "Sudhar") setIsAdmin(true); // Set isAdmin on join for Sudhar
     }
   };
 
@@ -66,7 +65,7 @@ export default function App() {
         <strong>Players in Room:</strong>
         <ul>
           {players.map(p => (
-            <li key={p.id}>{p.name} {p.role && `(as ${p.role})`}</li>
+            <li key={p.id}>{p.name} {p.id === socket.id ? "(You)" : ""} {p.role && `(${p.role})`}</li>
           ))}
         </ul>
       </div>
@@ -75,7 +74,7 @@ export default function App() {
           <button onClick={handleStartGame}>Start Game</button>
           <button onClick={handleNextWord}>Next Word</button>
           {subject && <div>Current Subject: {subject}</div>}
-          <h3>Admin View (All Players' Roles and Words)</h3>
+          <h3>Admin View: Roles and Words</h3>
           <ul>
             {players.map(p => (
               <li key={p.id}>
@@ -84,13 +83,13 @@ export default function App() {
             ))}
           </ul>
         </div>
-      ) : subject ? (
+      ) : (subject && role) ? (
         <div>
           <strong>Subject:</strong> {subject} <br />
           <strong>Your Role:</strong> {role} <br />
           <strong>Your Word:</strong> {word}
         </div>
-      ) : null}
+      ) : <div>Waiting for game to start...</div>}
     </div>
   );
 }
