@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
 
-const SERVER_URL = "https://imposter-game-sudhar-45.onrender.com"; // backend URL
+const SERVER_URL = "https://imposter-game-sudhar-45.onrender.com"; // replace
 const socket = io(SERVER_URL, { transports: ["websocket", "polling"] });
 
 export default function App() {
@@ -10,11 +10,11 @@ export default function App() {
   const [roomCode, setRoomCode] = useState("1234");
   const [players, setPlayers] = useState([]);
   const [roleInfo, setRoleInfo] = useState(null);
-  const [isJoined, setIsJoined] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [adminView, setAdminView] = useState([]);
 
   useEffect(() => {
-    // Check localStorage on load
     const saved = JSON.parse(localStorage.getItem("player"));
     if (saved) {
       setPlayerName(saved.playerName);
@@ -26,33 +26,35 @@ export default function App() {
     socket.on("roomUpdate", (players) => setPlayers(players));
 
     socket.on("gameWord", (data) => {
-      setRoleInfo(data);
-      if (data.isAdmin) setIsAdmin(true);
+      if (data.role && data.word) setRoleInfo(data);
+      setIsAdmin(data.isAdmin || false);
+      localStorage.setItem(
+        "player",
+        JSON.stringify({ playerName, roomCode })
+      );
+    });
+
+    socket.on("adminView", (data) => {
+      setIsAdmin(true);
+      setAdminView(data);
     });
 
     return () => {
       socket.off("roomUpdate");
       socket.off("gameWord");
+      socket.off("adminView");
     };
-  }, []);
+  }, [playerName, roomCode]);
 
   const joinRoom = () => {
     if (!playerName) return alert("Enter name");
-    const playerObj = { roomCode, playerName };
-    localStorage.setItem("player", JSON.stringify(playerObj));
-    socket.emit("joinRoom", playerObj);
+    socket.emit("joinRoom", { roomCode, playerName });
+    localStorage.setItem("player", JSON.stringify({ playerName, roomCode }));
     setIsJoined(true);
   };
 
-  const startGame = () => {
-    if (!isAdmin) return alert("Only Sudhar can start the game");
-    socket.emit("startGame", roomCode);
-  };
-
-  const nextWord = () => {
-    if (!isAdmin) return alert("Only Sudhar can give next word");
-    socket.emit("nextWord", roomCode);
-  };
+  const startGame = () => socket.emit("startGame", roomCode);
+  const nextWord = () => socket.emit("nextWord", roomCode);
 
   return (
     <div className="game-container">
@@ -65,49 +67,42 @@ export default function App() {
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
           />
-          <input
-            placeholder="Room code"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value)}
-          />
           <button onClick={joinRoom}>Join</button>
         </div>
       )}
 
-      {isJoined && (
-        <div>
-          <h3>
-            Player: {playerName} {isAdmin && "(Admin)"}
-          </h3>
+      <h3>Players in Room:</h3>
+      <ul>
+        {players.map((p) => (
+          <li key={p.id}>{p.name}</li>
+        ))}
+      </ul>
 
-          <h3>Players in Room:</h3>
+      {isAdmin && (
+        <div className="admin-panel">
+          <h2>Admin Dashboard</h2>
+          <button onClick={startGame}>Start Game</button>
+          <button onClick={nextWord}>Next Word</button>
+
+          <h3>Assignments:</h3>
           <ul>
-            {players.map((p) => (
-              <li key={p.id}>
-                {p.name} {p.isAdmin && "(Admin)"}
+            {adminView.map((p, idx) => (
+              <li key={idx}>
+                {p.name} → {p.role} ({p.word})
               </li>
             ))}
           </ul>
+        </div>
+      )}
 
-          {/* Only Admin buttons */}
-          {isAdmin && (
-            <div>
-              <button onClick={startGame}>Start Game</button>
-              <button onClick={nextWord}>Next Word</button>
-            </div>
-          )}
-
-          {/* Role/Word display */}
-          {roleInfo && (
-            <div
-              className={`role-box ${
-                roleInfo.role === "Imposter" ? "role-imposter" : "role-crewmate"
-              }`}
-            >
-              Your Role: {roleInfo.role} <br />
-              Your Word: {roleInfo.word}
-            </div>
-          )}
+      {!isAdmin && roleInfo && (
+        <div
+          className={`role-box ${
+            roleInfo.role === "Imposter" ? "role-imposter" : "role-crewmate"
+          }`}
+        >
+          <strong>Your Role:</strong> {roleInfo.role} <br />
+          <strong>Your Word:</strong> {roleInfo.word}
         </div>
       )}
     </div>
