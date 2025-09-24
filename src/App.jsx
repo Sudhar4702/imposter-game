@@ -1,36 +1,30 @@
-// App.jsx
 import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("https://imposter-game-sudhar-45.onrender.com", {
-  transports: ["websocket"],
-});
+const socket = io("https://imposter-game-sudhar-45.onrender.com", { transports: ['websocket'] });
 
-function App() {
-  // State
-  const [roomCode, setRoomCode] = useState("");
+export default function App() {
   const [playerName, setPlayerName] = useState("");
+  const [roomCode, setRoomCode] = useState("");
   const [joined, setJoined] = useState(false);
   const [players, setPlayers] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [subject, setSubject] = useState(null);
-  const [role, setRole] = useState(null);
-  const [word, setWord] = useState(null);
+  const [subject, setSubject] = useState("");
+  const [role, setRole] = useState("");
+  const [word, setWord] = useState("");
 
-  // Events
   useEffect(() => {
     socket.on("roomUpdate", (players) => {
       setPlayers(players);
-      const self = players.find((p) => p.name === playerName);
-      if (self) setIsAdmin(self.role === "Admin");
+      const user = players.find((p) => p.name === playerName);
+      setIsAdmin(user && user.role === "Admin");
     });
-
     socket.on("adminView", (data) => {
       setSubject(data.subject);
       setRole("Admin");
       setWord(null);
+      setPlayers(data.players); // Update full player list with roles and words
     });
-
     socket.on("gameWord", (data) => {
       setSubject(data.subject);
       setRole(data.role);
@@ -51,29 +45,15 @@ function App() {
     }
   };
 
-  const handleStartGame = () => {
-    socket.emit("startGame", roomCode);
-  };
+  const handleStartGame = () => socket.emit("startGame", roomCode);
+  const handleNextWord = () => socket.emit("nextWord", roomCode);
 
-  const handleNextWord = () => {
-    socket.emit("nextWord", roomCode);
-  };
-
-  // UI
   if (!joined) {
     return (
       <div>
         <h2>ImposterWord Game</h2>
-        <input
-          placeholder="Room Code"
-          value={roomCode}
-          onChange={(e) => setRoomCode(e.target.value)}
-        />
-        <input
-          placeholder="Your Name"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-        />
+        <input placeholder="Room Code" value={roomCode} onChange={e => setRoomCode(e.target.value)} />
+        <input placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
         <button onClick={handleJoin}>Join Room</button>
       </div>
     );
@@ -85,29 +65,32 @@ function App() {
       <div>
         <strong>Players in Room:</strong>
         <ul>
-          {players.map((p) => (
+          {players.map(p => (
             <li key={p.id}>{p.name} {p.role && `(as ${p.role})`}</li>
           ))}
         </ul>
       </div>
-
-      {isAdmin && (
-        <>
+      {isAdmin ? (
+        <div>
           <button onClick={handleStartGame}>Start Game</button>
           <button onClick={handleNextWord}>Next Word</button>
           {subject && <div>Current Subject: {subject}</div>}
-        </>
-      )}
-
-      {!isAdmin && subject && (
+          <h3>Admin View (All Players' Roles and Words)</h3>
+          <ul>
+            {players.map(p => (
+              <li key={p.id}>
+                {p.name} - Role: {p.role} - Word: {p.word || "N/A"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : subject ? (
         <div>
-          <strong>Subject:</strong> {subject} <br/>
-          <strong>Your Role:</strong> {role} <br/>
+          <strong>Subject:</strong> {subject} <br />
+          <strong>Your Role:</strong> {role} <br />
           <strong>Your Word:</strong> {word}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
-
-export default App;
