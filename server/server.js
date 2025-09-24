@@ -32,7 +32,6 @@ io.on("connection", (socket) => {
     if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
     const room = rooms[roomCode];
 
-    // check for duplicate player names
     const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
