@@ -1,113 +1,146 @@
+// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
-  cors: {
-    origin: [
-      "https://imposter-game-sudhar-45.onrender.com", // frontend URL
-      "http://localhost:5173"
-    ],
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*" },
 });
 
-// Word sets for the game
-const wordPairs = [
-  { Imposter: "papaya", Crewmate: "mango" },
-  { Imposter: "helmet", Crewmate: "cap" },
-  { Imposter: "fork", Crewmate: "spoon" },
-  { Imposter: "sofa", Crewmate: "chair" },
-  { Imposter: "sun", Crewmate: "moon" },
-  { Imposter: "dog", Crewmate: "cat" },
-  { Imposter: "salt", Crewmate: "sugar" },
-  { Imposter: "car", Crewmate: "bus" }
+// Word sets with subjects
+const wordSets = [
+  {
+    subject: "Solar System",
+    crewmateWord: "Sun",
+    imposterWord: "Moon",
+  },
+  {
+    subject: "Fruits",
+    crewmateWord: "Apple",
+    imposterWord: "Orange",
+  },
+  {
+    subject: "Sports",
+    crewmateWord: "Football",
+    imposterWord: "Cricket",
+  },
+  {
+    subject: "Animals",
+    crewmateWord: "Lion",
+    imposterWord: "Tiger",
+  },
 ];
 
-let rooms = {}; // store room states
+let rooms = {}; // { roomCode: { players: [], currentSet: null } }
 
-function assignRolesAndWords(roomCode) {
-  const room = rooms[roomCode];
-  if (!room || room.players.length < 2) return;
+io.on("connection", (socket) => {
+  console.log("New client connected:", socket.id);
 
-  const chosen = wordPairs[Math.floor(Math.random() * wordPairs.length)];
-  room.currentWords = chosen;
-
-  // pick imposters
-  const shuffled = [...room.players].sort(() => 0.5 - Math.random());
-  const numImposters = Math.min(1, room.players.length - 1); // 1 imposter
-  shuffled.forEach((p, i) => {
-    if (p.name === "Sudhar") {
-      p.role = "Admin";
-      p.word = "N/A";
-    } else if (i < numImposters) {
-      p.role = "Imposter";
-      p.word = chosen.Imposter;
-    } else {
-      p.role = "Crewmate";
-      p.word = chosen.Crewmate;
+  // Join Room
+  socket.on("joinRoom", ({ roomCode, playerName }) => {
+    if (!rooms[roomCode]) {
+      rooms[roomCode] = { players: [], currentSet: null, admin: null };
     }
-    io.to(p.id).emit("gameWord", { role: p.role, word: p.word });
+
+    const existing = rooms[roomCode].players.find(
+      (p) => p.name.toLowerCase() === playerName.toLowerCase()
+    );
+    if (existing) {
+      socket.emit("errorMessage", "Name already taken in this room.");
+      return;
+    }
+
+    const isAdmin = playerName === "Sudhar"; // Sudhar = admin
+    if (isAdmin && !rooms[roomCode].admin) {
+      rooms[roomCode].admin = socket.id;
+    }
+
+    const newPlayer = { id: socket.id, name: playerName, role: null, word: null };
+    rooms[roomCode].players.push(newPlayer);
+
+    socket.join(roomCode);
+    io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
   });
 
-  // send admin full info
-  const admin = room.players.find((p) => p.name === "Sudhar");
-  if (admin) {
-    io.to(admin.id).emit("adminUpdate", {
-      words: chosen,
-      players: room.players.map((p) => ({
-        id: p.id,
-        name: p.name,
+  // Start Game (Admin only)
+  socket.on("startGame", (roomCode) => {
+    const room = rooms[roomCode];
+    if (!room) return;
+    if (room.admin !== socket.id) return; // only admin
+
+    assignRolesAndWords(room);
+    sendGameState(roomCode);
+  });
+
+  // Next Word (Admin only)
+  socket.on("nextWord", (roomCode) => {
+    const room = rooms[roomCode];
+    if (!room) return;
+    if (room.admin !== socket.id) return;
+
+    assignRolesAndWords(room);
+    sendGameState(roomCode);
+  });
+
+  socket.on("disconnect", () => {
+    for (const roomCode in rooms) {
+      rooms[roomCode].players = rooms[roomCode].players.filter(
+        (p) => p.id !== socket.id
+      );
+      if (rooms[roomCode].players.length === 0) {
+        delete rooms[roomCode];
+      } else {
+        io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
+      }
+    }
+  });
+});
+
+// Assign roles & words
+function assignRolesAndWords(room) {
+  const set = wordSets[Math.floor(Math.random() * wordSets.length)];
+  room.currentSet = set;
+
+  // Randomly pick one imposter
+  const imposterIndex = Math.floor(Math.random() * room.players.length);
+  room.players.forEach((player, i) => {
+    if (room.admin === player.id) {
+      // Admin doesn't play
+      player.role = "Admin";
+      player.word = null;
+    } else if (i === imposterIndex) {
+      player.role = "Imposter";
+      player.word = set.imposterWord;
+    } else {
+      player.role = "Crewmate";
+      player.word = set.crewmateWord;
+    }
+  });
+}
+
+// Send game state to everyone
+function sendGameState(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+
+  room.players.forEach((p) => {
+    if (p.role === "Admin") {
+      io.to(p.id).emit("adminView", {
+        subject: room.currentSet.subject,
+        players: room.players,
+      });
+    } else {
+      io.to(p.id).emit("gameWord", {
+        subject: room.currentSet.subject,
         role: p.role,
-        word: p.word
-      }))
-    });
-  }
+        word: p.word,
+      });
+    }
+  });
 
   io.to(roomCode).emit("roomUpdate", room.players);
 }
 
-io.on("connection", (socket) => {
-  console.log("✅ Player connected:", socket.id);
-
-  socket.on("joinRoom", ({ roomCode, playerName }) => {
-    if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentWords: null };
-
-    let room = rooms[roomCode];
-    let existing = room.players.find((p) => p.name === playerName);
-
-    if (existing) {
-      existing.id = socket.id; // update id if reconnected
-    } else {
-      room.players.push({ id: socket.id, name: playerName, role: null, word: null });
-    }
-
-    socket.join(roomCode);
-    io.to(roomCode).emit("roomUpdate", room.players);
-
-    // if game already started → re-send old role/word
-    if (room.currentWords) {
-      let p = room.players.find((pl) => pl.id === socket.id);
-      if (p) io.to(p.id).emit("gameWord", { role: p.role, word: p.word });
-    }
-  });
-
-  socket.on("startGame", (roomCode) => assignRolesAndWords(roomCode));
-  socket.on("nextWord", (roomCode) => assignRolesAndWords(roomCode));
-
-  socket.on("disconnect", () => {
-    console.log("❌ Player disconnected:", socket.id);
-    for (const code in rooms) {
-      rooms[code].players = rooms[code].players.filter((p) => p.id !== socket.id);
-      io.to(code).emit("roomUpdate", rooms[code].players);
-    }
-  });
-});
-
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+server.listen(4000, () => console.log("Server running on port 4000"));
