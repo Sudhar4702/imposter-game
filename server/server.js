@@ -1,99 +1,81 @@
-// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: [
+      "https://imposter-game-sudhar-45.onrender.com", // deployed frontend
+      "http://localhost:5173" // local dev
+    ],
+    methods: ["GET", "POST"]
+  }
 });
 
 // Word sets with subjects
 const wordSets = [
-  {
-    subject: "Solar System",
-    crewmateWord: "Sun",
-    imposterWord: "Moon",
-  },
-  {
-    subject: "Fruits",
-    crewmateWord: "Apple",
-    imposterWord: "Orange",
-  },
-  {
-    subject: "Sports",
-    crewmateWord: "Football",
-    imposterWord: "Cricket",
-  },
-  {
-    subject: "Animals",
-    crewmateWord: "Lion",
-    imposterWord: "Tiger",
-  },
+  { subject: "Solar System", crewmateWord: "Sun", imposterWord: "Moon" },
+  { subject: "Fruits", crewmateWord: "Apple", imposterWord: "Orange" },
+  { subject: "Sports", crewmateWord: "Football", imposterWord: "Cricket" },
+  { subject: "Animals", crewmateWord: "Lion", imposterWord: "Tiger" },
+  { subject: "Colors", crewmateWord: "White", imposterWord: "Black" }
 ];
 
-let rooms = {}; // { roomCode: { players: [], currentSet: null } }
+let rooms = {}; // { roomCode: { players: [], currentSet: null, admin: null } }
 
 io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
+  console.log("✅ Player connected:", socket.id);
 
-  // Join Room
   socket.on("joinRoom", ({ roomCode, playerName }) => {
-    if (!rooms[roomCode]) {
-      rooms[roomCode] = { players: [], currentSet: null, admin: null };
-    }
+    if (!rooms[roomCode]) rooms[roomCode] = { players: [], currentSet: null, admin: null };
+    const room = rooms[roomCode];
 
-    const existing = rooms[roomCode].players.find(
+    const existing = room.players.find(
       (p) => p.name.toLowerCase() === playerName.toLowerCase()
     );
     if (existing) {
-      socket.emit("errorMessage", "Name already taken in this room.");
+      existing.id = socket.id; // rejoin
+      socket.join(roomCode);
+      socket.emit("gameWord", existing.word ? { ...existing } : null);
       return;
     }
 
-    const isAdmin = playerName === "Sudhar"; // Sudhar = admin
-    if (isAdmin && !rooms[roomCode].admin) {
-      rooms[roomCode].admin = socket.id;
-    }
+    const isAdmin = playerName === "Sudhar";
+    if (isAdmin && !room.admin) room.admin = socket.id;
 
     const newPlayer = { id: socket.id, name: playerName, role: null, word: null };
-    rooms[roomCode].players.push(newPlayer);
-
+    room.players.push(newPlayer);
     socket.join(roomCode);
-    io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
+
+    // resend room players
+    io.to(roomCode).emit("roomUpdate", room.players);
+
+    // if game already started, send existing roles/words
+    if (room.currentSet) sendGameState(roomCode);
   });
 
-  // Start Game (Admin only)
   socket.on("startGame", (roomCode) => {
     const room = rooms[roomCode];
-    if (!room) return;
-    if (room.admin !== socket.id) return; // only admin
-
+    if (!room || room.admin !== socket.id) return;
     assignRolesAndWords(room);
     sendGameState(roomCode);
   });
 
-  // Next Word (Admin only)
   socket.on("nextWord", (roomCode) => {
     const room = rooms[roomCode];
-    if (!room) return;
-    if (room.admin !== socket.id) return;
-
+    if (!room || room.admin !== socket.id) return;
     assignRolesAndWords(room);
     sendGameState(roomCode);
   });
 
   socket.on("disconnect", () => {
     for (const roomCode in rooms) {
-      rooms[roomCode].players = rooms[roomCode].players.filter(
-        (p) => p.id !== socket.id
-      );
-      if (rooms[roomCode].players.length === 0) {
-        delete rooms[roomCode];
-      } else {
-        io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
-      }
+      rooms[roomCode].players = rooms[roomCode].players.filter(p => p.id !== socket.id);
+      io.to(roomCode).emit("roomUpdate", rooms[roomCode].players);
+      if (rooms[roomCode].players.length === 0) delete rooms[roomCode];
     }
   });
 });
@@ -103,39 +85,39 @@ function assignRolesAndWords(room) {
   const set = wordSets[Math.floor(Math.random() * wordSets.length)];
   room.currentSet = set;
 
-  // Randomly pick one imposter
-  const imposterIndex = Math.floor(Math.random() * room.players.length);
-  room.players.forEach((player, i) => {
-    if (room.admin === player.id) {
-      // Admin doesn't play
-      player.role = "Admin";
-      player.word = null;
-    } else if (i === imposterIndex) {
-      player.role = "Imposter";
-      player.word = set.imposterWord;
+  const playersNoAdmin = room.players.filter(p => p.id !== room.admin);
+  const imposterIndex = Math.floor(Math.random() * playersNoAdmin.length);
+
+  room.players.forEach((p, i) => {
+    if (p.id === room.admin) {
+      p.role = "Admin";
+      p.word = null;
+    } else if (playersNoAdmin[imposterIndex].id === p.id) {
+      p.role = "Imposter";
+      p.word = set.imposterWord;
     } else {
-      player.role = "Crewmate";
-      player.word = set.crewmateWord;
+      p.role = "Crewmate";
+      p.word = set.crewmateWord;
     }
   });
 }
 
-// Send game state to everyone
+// Send state to everyone
 function sendGameState(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
 
   room.players.forEach((p) => {
-    if (p.role === "Admin") {
+    if (p.id === room.admin) {
       io.to(p.id).emit("adminView", {
         subject: room.currentSet.subject,
-        players: room.players,
+        players: room.players
       });
     } else {
       io.to(p.id).emit("gameWord", {
         subject: room.currentSet.subject,
         role: p.role,
-        word: p.word,
+        word: p.word
       });
     }
   });
@@ -143,4 +125,5 @@ function sendGameState(roomCode) {
   io.to(roomCode).emit("roomUpdate", room.players);
 }
 
-server.listen(4000, () => console.log("Server running on port 4000"));
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
