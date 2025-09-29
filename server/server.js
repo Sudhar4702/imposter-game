@@ -8,7 +8,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-sudhar-45.onrender.com",
+      "https://imposter-game-3456789.onrender.com",
       "http://localhost:5173"
     ],
     methods: ["GET", "POST"]
