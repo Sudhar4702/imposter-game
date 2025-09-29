@@ -8,7 +8,10 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://imposter-game-3456789.onrender.com",
+      // 🛑 The single, correct deployed URL for BOTH client and server
+      "https://imposter-game-3456789.onrender.com", 
+      
+      // Keep this for local development
       "http://localhost:5173"
     ],
     methods: ["GET", "POST"]
