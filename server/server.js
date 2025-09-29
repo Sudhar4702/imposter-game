@@ -18,7 +18,7 @@ const io = new Server(server, {
   }
 });
 
-const wordList = [
+const wordSets = [
   { subject: "Solar System", crewmateWord: "Sun", imposterWord: "Moon" },
   { subject: "Fruits", crewmateWord: "Apple", imposterWord: "Orange" },
   { subject: "Sports", crewmateWord: "Football", imposterWord: "Cricket" },
