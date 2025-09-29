@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import "./App.css";
 
-const socket = io("https://imposter-game-sudhar-45.onrender.com", { transports: ['websocket'] });
+const socket = io("https://imposter-game-3456789.onrender.com", { transports: ['websocket'] });
 
 export default function App() {
   const [playerName, setPlayerName] = useState("");
